@@ -6,6 +6,62 @@
   
   <script>
 
+    //Main Called command
+    const sendRequest = async (page, type) => {
+      const response = await fetch(page, {
+        method: 'GET',
+        headers: { 'Accept': type },
+      });
+      handleResponse(response);
+    };
+
+    const handleResponse = async (response) => {
+      //Var declarations
+      const content = document.querySelector('#content');
+      content.innerHTML = '';
+
+      const contentType = response.headers.get('Content-Type') || '';
+      const text = await response.text();
+
+      let message;
+      let id;
+
+      //JSON formatted case. it feels wrong to call it on just a single element :(
+      if (contentType.includes('application/json')) {
+        const data = JSON.parse(text);
+        message = data.message;
+        id = data.id;
+      } else {
+      //XML Case. Lil' jerry rigged
+          const messageMatch = text.match(/<message>(.*?)<\/message>/);
+          message = messageMatch[1];
+
+          const idMatch = text.match(/<id>(.*?)<\/id>/);
+          if (idMatch) {
+            id = idMatch[1];
+          }
+      }
+
+      const heading = document.createElement('h1');
+      heading.textContent = id || `Status ${response.status}`;
+      const p = document.createElement('p');
+      p.textContent = `Message: ${message}`;
+      content.appendChild(heading);
+      content.appendChild(p);
+    };
+
+    //On load
+    const init = () => {
+      const pageSelect = document.querySelector('#page');
+      const typeSelect = document.querySelector('#type');
+      //Embedded function for calling always from init to keep pipeline the same
+      const send = () => sendRequest(pageSelect.value, typeSelect.value);
+
+      document.querySelector('#send').addEventListener('click', send);
+      send(); // also fire once when the page loads
+    };
+
+    window.onload = init;
   </script>
 </head>
 <body>
